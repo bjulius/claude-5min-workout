@@ -1,0 +1,14 @@
+{
+  "name": "claude-5min-workout",
+  "description": "Home of the Claude 5-Minute Workout — a guided, reversible tune-up for any Claude Code setup.",
+  "owner": {
+    "name": "Brian Julius"
+  },
+  "plugins": [
+    {
+      "name": "claude-5min-workout",
+      "source": "./",
+      "description": "Five-minute Claude Code tune-up: Karpathy rules, self-learning loop, Everything search, and claude-hud status line — pick what you want, everything is backed up first."
+    }
+  ]
+}

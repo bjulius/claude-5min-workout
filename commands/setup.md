@@ -1,5 +1,5 @@
 ---
-description: Five-minute Claude Code tune-up — back up CLAUDE.md, then pick which upgrades to apply (Karpathy rules, self-learning loop, Everything search, claude-hud status line).
+description: Five-minute Claude Code tune-up — back up CLAUDE.md, then pick which upgrades to apply (Karpathy rules, self-learning loop, Everything search, changelog checker, claude-hud status line).
 ---
 
 # Claude 5-Minute Workout — Setup
@@ -15,12 +15,13 @@ The user's global memory file is `~/.claude/CLAUDE.md`.
 
 ## Step 2 — Ask what to apply
 
-Use AskUserQuestion with ONE multiSelect question offering these four options (all selectable; briefly describe each):
+Use AskUserQuestion with ONE multiSelect question offering these five options (all selectable; briefly describe each):
 
 1. **Karpathy coding rules** — behavioral guidelines that reduce common LLM coding mistakes (think before coding, simplicity first, surgical changes, goal-driven execution). Added to the global CLAUDE.md.
 2. **Self-learning loop (Boris Cherny)** — Claude records a one-line lesson in CLAUDE.md whenever the user corrects it. Comes with a session-start nudge and a `/prune-lessons` skill (both already active via this plugin) that keep the lessons list curated over time.
 3. **Everything file search** — a skill for instant local file search on Windows using the Everything search engine (bundled with this plugin; needs the free Everything app installed).
-4. **claude-hud status line** — a heads-up status line showing model, context usage, and session info at the bottom of the terminal (separate plugin by jarrodwatts).
+4. **Changelog checker** — a skill that summarizes what shipped in Claude Code since you last looked, plus a session-start nudge (both bundled with this plugin) so you find out without having to remember to ask.
+5. **claude-hud status line** — a heads-up status line showing model, context usage, and session info at the bottom of the terminal (separate plugin by jarrodwatts).
 
 ## Step 3 — Apply the selected items
 
@@ -49,6 +50,14 @@ The skill is bundled with this plugin — nothing to install in Claude Code. Ver
 - Tell the user the skill activates automatically when they ask Claude to find local files.
 - This is Windows-only; on macOS/Linux, say so and skip.
 
+### If "Changelog checker" selected
+
+Both pieces are bundled with this plugin and already active — there is nothing to install. Explain them and confirm the starting state:
+
+- The skill activates when the user asks "what's new in Claude Code" or "check the changelog". It fetches https://github.com/anthropics/claude-code/releases, reports only what shipped since their last check, and highlights security fixes, breaking changes, and major features.
+- A SessionStart hook nudges them when it's been more than 14 days since the last check. It is silent otherwise, makes no network calls, and never blocks startup.
+- Both share one state file: `~/.claude/changelog-last-check.txt`. It's deliberately user-global, so the date survives moving between projects. If the file doesn't exist, the hook creates it with today's date on first run rather than nudging immediately — mention that the first nudge is therefore up to 14 days away.
+
 ### If "claude-hud status line" selected
 
 Run these via Bash (the plugin CLI), reporting output honestly:
@@ -67,6 +76,7 @@ Finally, tell the user to run `/claude-hud:setup` (a slash command only they can
 List exactly what changed, file by file, including the backup path, and how to undo each item:
 - CLAUDE.md changes: restore from the backup created in Step 1.
 - claude-hud: `/plugin uninstall claude-hud`.
-- This plugin's hook and skills: disable the plugin.
+- This plugin's hooks and skills: disable the plugin.
+- Changelog state: delete `~/.claude/changelog-last-check.txt` (the only file this plugin writes outside itself).
 
 Keep the report tight and beginner-friendly — define jargon (skill, hook, plugin, status line) in passing.

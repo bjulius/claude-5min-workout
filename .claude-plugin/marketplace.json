@@ -8,7 +8,7 @@
     {
       "name": "claude-5min-workout",
       "source": "./",
-      "description": "Five-minute Claude Code tune-up: Karpathy rules, self-learning loop, Everything search, and claude-hud status line — pick what you want, everything is backed up first."
+      "description": "Five-minute Claude Code tune-up: Karpathy rules, self-learning loop, Everything search, Claude Code changelog checker, and claude-hud status line — pick what you want, everything is backed up first."
     }
   ]
 }

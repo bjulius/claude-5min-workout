@@ -18,11 +18,11 @@ A five-minute tune-up for any Claude Code setup. One command walks you through f
 ## Install
 
 ```
-/plugin marketplace add <path-or-github-repo-of-this-plugin>
+/plugin marketplace add bjulius/claude-5min-workout
 /plugin install claude-5min-workout
 ```
 
-Then start the workout:
+Restart Claude Code so the plugin loads, then start the workout:
 
 ```
 /claude-5min-workout:setup
@@ -89,3 +89,11 @@ skills/changelog-skill/         Claude Code release summarizer
 assets/karpathy-rules.md        content merged by setup option 1
 assets/self-learning.md         content appended by setup option 2
 ```
+
+## Compatibility
+
+Four of the five upgrades work anywhere Claude Code runs. **Everything file search is Windows-only** — it depends on the [Everything](https://www.voidtools.com/) search engine, which has no macOS or Linux equivalent. The setup command detects this and skips that option on other platforms.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

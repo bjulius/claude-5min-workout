@@ -107,10 +107,14 @@ function parseEntries(xml) {
 async function main() {
   // Once per day, regardless of how many sessions get started.
   if (readDate(RUN_MARKER) === today()) return;
-  fs.writeFileSync(RUN_MARKER, today());
 
   const xml = await fetchFeed();
   if (!xml) return;
+
+  // Mark the day spent only once the feed actually came back. Writing the marker
+  // before the fetch would let a single offline session burn the day's check and
+  // stay silent until tomorrow — the failure a catch-up tool can least afford.
+  fs.writeFileSync(RUN_MARKER, today());
 
   const entries = parseEntries(xml);
   if (!entries.length) return;

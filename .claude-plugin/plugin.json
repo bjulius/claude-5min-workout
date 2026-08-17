@@ -1,10 +1,9 @@
 {
   "name": "claude-5min-workout",
   "description": "Five-minute Claude Code tune-up: backs up your CLAUDE.md, then optionally adds the Karpathy coding rules, the Boris Cherny self-learning loop (with a lessons-pruning hook and skill), the Everything file-search skill, a Claude Code changelog checker (skill plus session-start nudge), and the claude-hud status line.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "Brian Julius"
   },
-  "commands": ["./commands/setup.md"],
-  "hooks": "./hooks/hooks.json"
+  "commands": ["./commands/setup.md"]
 }

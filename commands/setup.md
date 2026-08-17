@@ -55,8 +55,9 @@ The skill is bundled with this plugin — nothing to install in Claude Code. Ver
 Both pieces are bundled with this plugin and already active — there is nothing to install. Explain them and confirm the starting state:
 
 - The skill activates when the user asks "what's new in Claude Code" or "check the changelog". It fetches https://github.com/anthropics/claude-code/releases, reports only what shipped since their last check, and highlights security fixes, breaking changes, and major features.
-- A SessionStart hook nudges them when it's been more than 14 days since the last check. It is silent otherwise, makes no network calls, and never blocks startup.
-- Both share one state file: `~/.claude/changelog-last-check.txt`. It's deliberately user-global, so the date survives moving between projects. If the file doesn't exist, the hook creates it with today's date on first run rather than nudging immediately — mention that the first nudge is therefore up to 14 days away.
+- A SessionStart hook checks the release feed at most once a day and prints one line naming how many releases they're behind. It stays silent when nothing has shipped, when the machine is offline, and on every session after the first each day. It never blocks startup and makes no LLM calls.
+- Both share one state file: `~/.claude/changelog-last-check.txt`. It's deliberately user-global, so the date survives moving between projects. On a machine with no state file yet, the hook seeds it with today's date and says nothing rather than dumping the entire release history.
+- Reading the summary is what resets the clock, so the nudge keeps reporting until they actually catch up. It counts real releases rather than elapsed days, so silence genuinely means nothing shipped.
 
 ### If "claude-hud status line" selected
 

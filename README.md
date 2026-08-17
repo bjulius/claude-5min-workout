@@ -12,7 +12,8 @@ A five-minute tune-up for any Claude Code setup. One command walks you through f
 4. **Changelog checker** — stop missing what shipped. Claude Code releases move fast, and the only way to keep up is to remember to go look:
    - a skill that fetches the official releases, filters to what's new since your last check, and calls out security fixes, breaking changes, and major features
    - a session-start hook that checks the release feed once a day and tells you how many releases you're behind — silent when there's nothing new, when you're offline, and on every session after the first each day
-   - state lives in `~/.claude/changelog-last-check.txt`, so the date follows you between projects instead of resetting in every repo
+   - your choice of cadence: a one-line nudge you pull the summary from (default), or an automatic summary at the first session of the day
+   - state is the release tag you last caught up on, in `~/.claude/changelog-last-check.txt`, so it follows you between projects instead of resetting in every repo — and because it's a tag rather than a date, releases that ship later on a day you already checked don't get silently skipped
 5. **claude-hud status line** — installs [jarrodwatts/claude-hud](https://github.com/jarrodwatts/claude-hud), a heads-up status line showing model, context usage, and session info.
 
 ## Install
@@ -97,3 +98,5 @@ Four of the five upgrades work anywhere Claude Code runs. **Everything file sear
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+The MIT license covers the plugin's own code. `skills/everything-search/es.exe` is the Everything command-line tool, redistributed unmodified from [voidtools](https://www.voidtools.com/) and covered by their license, not this one. It is bundled so the search skill works without a separate download; if your security tooling flags a committed `.exe`, that's what it is, and you can delete it and put your own `es.exe` on `PATH` instead.

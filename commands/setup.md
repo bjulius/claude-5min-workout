@@ -15,13 +15,22 @@ The user's global memory file is `~/.claude/CLAUDE.md`.
 
 ## Step 2 — Ask what to apply
 
-Use AskUserQuestion with ONE multiSelect question offering these five options (all selectable; briefly describe each):
+First, check the platform. On macOS/Linux, drop **Everything file search** from the list entirely — it is Windows-only — and note in one line that it was skipped. Never offer an option you are going to refuse in Step 3.
+
+Then use a SINGLE AskUserQuestion call containing TWO multiSelect questions. (AskUserQuestion allows at most 4 options per question, and there are five items — so they are grouped by what they touch, which is also the distinction the user cares about: edit my memory file, vs. install tooling.)
+
+**Question 1 — header "CLAUDE.md" — "Which rules should I add to your global CLAUDE.md?"**
 
 1. **Karpathy coding rules** — behavioral guidelines that reduce common LLM coding mistakes (think before coding, simplicity first, surgical changes, goal-driven execution). Added to the global CLAUDE.md.
 2. **Self-learning loop (Boris Cherny)** — Claude records a one-line lesson in CLAUDE.md whenever the user corrects it. Comes with a session-start nudge and a `/prune-lessons` skill (both already active via this plugin) that keep the lessons list curated over time.
-3. **Everything file search** — a skill for instant local file search on Windows using the Everything search engine (bundled with this plugin; needs the free Everything app installed).
+
+**Question 2 — header "Tooling" — "Which tooling should I set up?"**
+
+3. **Everything file search** — a skill for instant local file search on Windows using the Everything search engine (bundled with this plugin; needs the free Everything app installed). *Windows only — omit this option entirely on macOS/Linux.*
 4. **Changelog checker** — a skill that summarizes what shipped in Claude Code since you last looked, plus a session-start nudge (both bundled with this plugin) so you find out without having to remember to ask.
 5. **claude-hud status line** — a heads-up status line showing model, context usage, and session info at the bottom of the terminal (separate plugin by jarrodwatts).
+
+If an item is already in place (e.g. the `### Lessons` heading already exists, or claude-hud is already installed), still offer it, but say so in its description so the user knows the run will be a verification rather than a change.
 
 ## Step 3 — Apply the selected items
 
@@ -56,8 +65,17 @@ Both pieces are bundled with this plugin and already active — there is nothing
 
 - The skill activates when the user asks "what's new in Claude Code" or "check the changelog". It fetches https://github.com/anthropics/claude-code/releases, reports only what shipped since their last check, and highlights security fixes, breaking changes, and major features.
 - A SessionStart hook checks the release feed at most once a day and prints one line naming how many releases they're behind. It stays silent when nothing has shipped, when the machine is offline, and on every session after the first each day. It never blocks startup and makes no LLM calls.
-- Both share one state file: `~/.claude/changelog-last-check.txt`. It's deliberately user-global, so the date survives moving between projects. On a machine with no state file yet, the hook seeds it with today's date and says nothing rather than dumping the entire release history.
-- Reading the summary is what resets the clock, so the nudge keeps reporting until they actually catch up. It counts real releases rather than elapsed days, so silence genuinely means nothing shipped.
+- Both share one state file: `~/.claude/changelog-last-check.txt`, holding the release tag the user last caught up on (e.g. `v2.1.233`). It's deliberately user-global, so it survives moving between projects. On a machine with no state file yet, the hook seeds it with the newest tag and says nothing rather than dumping the entire release history.
+- Reading the summary is what advances the tag, so the nudge keeps reporting until they actually catch up. It counts real releases rather than elapsed days, so silence genuinely means nothing shipped.
+
+Then ask the user how they want to be told, with a second AskUserQuestion (single-select, two options):
+
+- **Nudge me (default)** — one line at the first session of the day saying how many releases you're behind. You pull the summary when you're ready.
+- **Summarize automatically** — the first session each day runs the changelog skill for you and gives you the summary up front, before you start work.
+
+Write the answer to `~/.claude/changelog-cadence.txt`: the single word `auto` for the second option, or `nudge` for the first. The hook treats a missing file as `nudge`, so writing `nudge` is optional but do it anyway so the setting is visible and easy to edit later.
+
+Be straight with the user about the tradeoff when they pick: `auto` costs tokens and puts a summary in front of whatever they actually opened the terminal to do. It suits people who want a briefing; `nudge` suits people mid-task. Either way, asking "what's new in Claude Code" works any time.
 
 ### If "claude-hud status line" selected
 
@@ -78,6 +96,9 @@ List exactly what changed, file by file, including the backup path, and how to u
 - CLAUDE.md changes: restore from the backup created in Step 1.
 - claude-hud: `/plugin uninstall claude-hud`.
 - This plugin's hooks and skills: disable the plugin.
-- Changelog state: delete `~/.claude/changelog-last-check.txt` (the only file this plugin writes outside itself).
+- Changelog cadence: edit or delete `~/.claude/changelog-cadence.txt` (missing = nudge).
+- Changelog state: delete `~/.claude/changelog-last-check.txt` to start over.
+
+Those, plus `~/.claude/.changelog-nudge-last-run` and `~/.claude/hooks/.lessons-last-pruned`, are the only files this plugin writes outside its own folder. All four are throwaway state — deleting any of them just resets that nudge.
 
 Keep the report tight and beginner-friendly — define jargon (skill, hook, plugin, status line) in passing.

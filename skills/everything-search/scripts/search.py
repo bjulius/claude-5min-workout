@@ -8,7 +8,7 @@ Formats results as Markdown for easy consumption by Claude and users.
 Usage:
     python search.py "query"
     python search.py "query" --limit 50
-    python search.py "query" --folder "C:\Users\brjul\Documents"
+    python search.py "query" --folder "C:\Users\you\Documents"
 """
 
 import subprocess

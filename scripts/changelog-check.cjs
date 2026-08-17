@@ -6,10 +6,16 @@
 // immediately without touching the network. No LLM calls. Fails silent on any error
 // (offline, GitHub down, proxy) and never blocks session start.
 //
-// It checks the release feed rather than nudging purely on elapsed time, because a
-// time-only nudge at daily cadence fires every day whether or not anything shipped:
-// the last-check date only advances when the user actually runs the skill. Counting
-// real releases means silence is meaningful.
+// State is the last release TAG the user caught up on ("v2.1.233"), not a date.
+// Dates lose releases: Claude Code ships more than once on some days, so a
+// date-granular "newer than last check" filter permanently hides anything published
+// later on a day the user already checked — silently, which is the worst way for a
+// catch-up tool to fail. Tags also sidestep the local-vs-UTC skew a date comparison
+// has to reason about, and make a same-day re-check correct instead of empty.
+//
+// Cadence is the user's choice, set during /claude-5min-workout:setup:
+//   nudge (default) — print one line and let them pull the summary when ready
+//   auto            — ask Claude to run the changelog skill and summarize now
 const fs = require("fs");
 const https = require("https");
 const os = require("os");
@@ -20,10 +26,11 @@ const FETCH_TIMEOUT_MS = 3000;
 
 const CLAUDE_DIR = path.join(os.homedir(), ".claude");
 const STATE_FILE = path.join(CLAUDE_DIR, "changelog-last-check.txt");
+const CADENCE_FILE = path.join(CLAUDE_DIR, "changelog-cadence.txt");
 const RUN_MARKER = path.join(CLAUDE_DIR, ".changelog-nudge-last-run");
 
-// Local calendar date, matching what the skill itself writes. toISOString() would
-// record the UTC date and disagree with the skill by a day each evening.
+// Local calendar date. Used only for the once-a-day run marker, where "has this
+// already fired today" is a question about the user's day, not about UTC.
 const today = () => {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, "0");
@@ -36,6 +43,27 @@ const readDate = (file) => {
     return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
   } catch {
     return null;
+  }
+};
+
+// Returns {tag} for current state, {date} for pre-0.3 state, or null if absent
+// or unrecognized. The date form is migrated to a tag the next time the skill runs.
+const readState = () => {
+  try {
+    const raw = fs.readFileSync(STATE_FILE, "utf8").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { date: raw };
+    if (/^v?\d+\.\d+\.\d+/.test(raw)) return { tag: raw };
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const readCadence = () => {
+  try {
+    return fs.readFileSync(CADENCE_FILE, "utf8").trim() === "auto" ? "auto" : "nudge";
+  } catch {
+    return "nudge";
   }
 };
 
@@ -60,9 +88,9 @@ function fetchFeed() {
   });
 }
 
-// Pull {title, date} out of each <entry> in the atom feed. Deliberately a plain
-// regex scan rather than an XML dependency — the shape here is stable and this has
-// to stay fast enough to run before a session starts.
+// Pull {tag, date} out of each <entry> in the atom feed, newest first. Deliberately
+// a plain regex scan rather than an XML dependency — the shape here is stable and
+// this has to stay fast enough to run before a session starts.
 function parseEntries(xml) {
   return xml
     .split("<entry")
@@ -71,20 +99,12 @@ function parseEntries(xml) {
       const updated = chunk.match(/<updated>([^<]+)<\/updated>/);
       const title = chunk.match(/<title>([^<]*)<\/title>/);
       if (!updated) return null;
-      return { date: updated[1].slice(0, 10), title: title ? title[1].trim() : "" };
+      return { date: updated[1].slice(0, 10), tag: title ? title[1].trim() : "" };
     })
     .filter(Boolean);
 }
 
 async function main() {
-  const lastCheck = readDate(STATE_FILE);
-
-  // No state yet: start the clock instead of nudging about the entire release history.
-  if (!lastCheck) {
-    fs.writeFileSync(STATE_FILE, today());
-    return;
-  }
-
   // Once per day, regardless of how many sessions get started.
   if (readDate(RUN_MARKER) === today()) return;
   fs.writeFileSync(RUN_MARKER, today());
@@ -92,18 +112,51 @@ async function main() {
   const xml = await fetchFeed();
   if (!xml) return;
 
-  const fresh = parseEntries(xml).filter((e) => e.date > lastCheck);
+  const entries = parseEntries(xml);
+  if (!entries.length) return;
+
+  // No state yet: start the clock at the newest release instead of nudging about
+  // the entire history. Silent on purpose — a fresh install should say nothing.
+  const state = readState();
+  if (!state) {
+    fs.writeFileSync(STATE_FILE, entries[0].tag);
+    return;
+  }
+
+  // The feed only ever returns its most recent window (10 entries today), so a user
+  // further behind than that shows up as "not in the feed at all". Report the count
+  // as "N+" rather than pretending the window is the whole story.
+  let fresh;
+  let capped;
+  if (state.tag) {
+    const idx = entries.findIndex((e) => e.tag === state.tag);
+    capped = idx === -1;
+    fresh = capped ? entries : entries.slice(0, idx);
+  } else {
+    // Pre-0.3 date state. Inclusive of the last-check day: re-reporting one already
+    // seen release once, at migration, beats silently dropping a same-day one.
+    fresh = entries.filter((e) => e.date >= state.date);
+    capped = fresh.length === entries.length;
+  }
   if (!fresh.length) return;
 
-  const names = fresh.slice(0, 3).map((e) => e.title).filter(Boolean);
+  const count = capped ? `${fresh.length}+` : `${fresh.length}`;
+  const plural = !capped && fresh.length === 1 ? "release" : "releases";
+  const names = fresh.slice(0, 3).map((e) => e.tag).filter(Boolean);
   const detail = names.length
     ? ` (${names.join(", ")}${fresh.length > names.length ? ", …" : ""})`
     : "";
-  const plural = fresh.length === 1 ? "release" : "releases";
+  const since = state.tag ? `since ${state.tag}` : `since ${state.date}`;
 
-  console.log(
-    `${fresh.length} new Claude Code ${plural} since ${lastCheck}${detail} — ask "what's new in Claude Code" for a summary.`
-  );
+  if (readCadence() === "auto") {
+    console.log(
+      `${count} new Claude Code ${plural} ${since}${detail}. Use the changelog-skill now to summarize them for the user, then carry on with whatever they asked for.`
+    );
+  } else {
+    console.log(
+      `${count} new Claude Code ${plural} ${since}${detail} — ask "what's new in Claude Code" for a summary.`
+    );
+  }
 }
 
 main().catch(() => {}).finally(() => process.exit(0));

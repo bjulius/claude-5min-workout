@@ -76,6 +76,36 @@ def poll(key, slugs, trials):
                 results.append({"model": slug, "trial": t, "error": str(e)})
     return results
 
+
+def load_pasted(d):
+    """Read manually-collected replies: one file per model, filename = model name,
+    containing that model's JSON blobs pasted back to back (any separators)."""
+    d = pathlib.Path(d)
+    if not d.is_dir():
+        sys.exit(f"No such directory: {d}\n"
+                 f"Create it and add one file per model, e.g. {d}/anthropic.txt")
+    out = []
+    for f in sorted(d.iterdir()):
+        if f.name.startswith("."):
+            continue
+        text, depth, start, n = f.read_text(), 0, None, 0
+        for i, ch in enumerate(text):          # brace-match so blobs need no separator
+            if ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}" and depth:
+                depth -= 1
+                if depth == 0:
+                    try:
+                        out.append({"model": f.stem, "trial": n, **json.loads(text[start:i + 1])})
+                        n += 1
+                    except json.JSONDecodeError as e:
+                        print(f"  skipped bad JSON in {f.name} at char {start}: {e}",
+                              file=sys.stderr)
+        print(f"  {f.stem}: {n} response(s)")
+    return out
+
 def aggregate(results):
     ok = [r for r in results if "error" not in r]
     if not ok:
@@ -100,6 +130,7 @@ def aggregate(results):
         votes[r.get("least_likely_to_survive", "?")] = votes.get(r.get("least_likely_to_survive", "?"), 0) + 1
     for lab, n in sorted(votes.items(), key=lambda kv: -kv[1]):
         print(f"  {lab:<12}{n}/{len(ok)}")
+    OUT.mkdir(parents=True, exist_ok=True)
     OUT.joinpath("aggregate.json").write_text(json.dumps(results, indent=2))
     print(f"\nRaw responses: {OUT/'raw'}   Aggregate: {OUT/'aggregate.json'}")
 
@@ -108,11 +139,15 @@ if __name__ == "__main__":
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--run", nargs="+", metavar="SLUG")
     ap.add_argument("--trials", type=int, default=3)
+    ap.add_argument("--paste", metavar="DIR",
+                    help="aggregate replies collected by hand from the web UI")
     a = ap.parse_args()
     k = os.environ.get("OPENROUTER_API_KEY")
-    if not k:
+    if not k and not a.paste:
         sys.exit("OPENROUTER_API_KEY is not set.")
-    if a.list:
+    if a.paste:
+        aggregate(load_pasted(a.paste))
+    elif a.list:
         list_models(k)
     elif a.run:
         aggregate(poll(k, a.run, a.trials))

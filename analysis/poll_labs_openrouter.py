@@ -15,10 +15,16 @@ DIMS = ["innovation", "market_position_now", "market_position_1yr", "market_posi
 OUT = pathlib.Path(__file__).parent / "out"
 
 def call(path, key, payload=None):
+    # key may be None: when the cloud environment holds an API credential for
+    # openrouter.ai, the agent proxy attaches Authorization after the request
+    # leaves the VM. Sending our own header too would collide with it.
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
     req = urllib.request.Request(
         f"{API}{path}",
         data=json.dumps(payload).encode() if payload else None,
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        headers=headers,
     )
     with urllib.request.urlopen(req, timeout=300) as r:
         return json.load(r)
@@ -139,12 +145,16 @@ if __name__ == "__main__":
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--run", nargs="+", metavar="SLUG")
     ap.add_argument("--trials", type=int, default=3)
+    ap.add_argument("--proxy-auth", action="store_true",
+                    help="send no Authorization header; the agent proxy adds it")
     ap.add_argument("--paste", metavar="DIR",
                     help="aggregate replies collected by hand from the web UI")
     a = ap.parse_args()
+    # No key needed when the environment injects one via an API credential.
     k = os.environ.get("OPENROUTER_API_KEY")
-    if not k and not a.paste:
-        sys.exit("OPENROUTER_API_KEY is not set.")
+    if not k and not a.paste and not a.proxy_auth:
+        sys.exit("OPENROUTER_API_KEY is not set. Pass --proxy-auth if the cloud "
+                 "environment holds an API credential for openrouter.ai.")
     if a.paste:
         aggregate(load_pasted(a.paste))
     elif a.list:

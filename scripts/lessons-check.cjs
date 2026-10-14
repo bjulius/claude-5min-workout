@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // SessionStart nudge: suggest /prune-lessons when the Lessons list in the
-// global CLAUDE.md grows past a threshold or hasn't been pruned in 30 days.
+// global CLAUDE.md grows past a threshold or hasn't been pruned in 30 days
+// (override with the LESSONS_PRUNE_DAYS env var).
 // Deterministic and fast — no LLM calls. Completely silent when the user has
 // no "### Lessons" section or nothing needs attention.
 const fs = require("fs");
@@ -8,7 +9,7 @@ const os = require("os");
 const path = require("path");
 
 const THRESHOLD = 15;
-const MAX_AGE_DAYS = 30;
+const MAX_AGE_DAYS = Number(process.env.LESSONS_PRUNE_DAYS) || 30;
 
 try {
   const claudeMd = path.join(os.homedir(), ".claude", "CLAUDE.md");
@@ -26,7 +27,7 @@ try {
     .split("\n")
     .filter((l) => /^\s*[-*]\s+\S/.test(l)).length;
 
-  // Start the 30-day clock on first run.
+  // Start the clock on first run.
   if (!fs.existsSync(marker)) {
     fs.mkdirSync(markerDir, { recursive: true });
     fs.writeFileSync(marker, new Date().toISOString());

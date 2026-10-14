@@ -6,7 +6,7 @@ A five-minute tune-up for any Claude Code setup. One command walks you through f
 
 1. **Karpathy coding rules** — behavioral guidelines that reduce common LLM coding mistakes: think before coding, simplicity first, surgical changes, goal-driven execution. Merged into your global `~/.claude/CLAUDE.md` (deduplicated against whatever you already have).
 2. **Self-learning loop (Boris Cherny)** — a rule that makes Claude record a one-line lesson whenever you correct it, plus the maintenance pieces that keep the list from rotting:
-   - a silent session-start hook that nudges you when the lessons list passes 15 entries or goes 30 days unpruned
+   - a silent session-start hook that nudges you when the lessons list passes 15 entries or goes 30 days unpruned (set `LESSONS_PRUNE_DAYS` in your settings.json `env` block to change the interval)
    - a `/prune-lessons` skill that finds duplicates, contradictions, and stale entries, and applies fixes only after you approve them
 3. **Everything file search** — bundled skill for instant local file search on Windows via the [Everything](https://www.voidtools.com/) search engine (`es.exe` included; you just need the free Everything app running).
 4. **Changelog checker** — stop missing what shipped. Claude Code releases move fast, and the only way to keep up is to remember to go look:

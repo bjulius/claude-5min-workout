@@ -47,7 +47,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/assets/karpathy-rules.md`. Merge its sections into `
 Read `${CLAUDE_PLUGIN_ROOT}/assets/self-learning.md`. Append its `### Self-Learning` and `### Lessons` sections to `~/.claude/CLAUDE.md` (skip if a `### Lessons` heading already exists — tell the user it's already set up).
 
 Then explain the two supporting pieces that ship with this plugin and are already active:
-- A SessionStart hook that silently counts lessons and nudges only when the list exceeds 15 entries or hasn't been pruned in 30 days. It does nothing until a `### Lessons` section exists.
+- A SessionStart hook that silently counts lessons and nudges only when the list exceeds 15 entries or hasn't been pruned in 30 days (the `LESSONS_PRUNE_DAYS` env var changes the interval). It does nothing until a `### Lessons` section exists.
 - The `/prune-lessons` skill for interactive, approval-gated curation.
 
 ### If "Everything file search" selected

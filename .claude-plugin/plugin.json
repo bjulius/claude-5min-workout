@@ -1,7 +1,7 @@
 {
   "name": "claude-5min-workout",
   "description": "A guided, reversible five-minute tune-up for your Claude Code setup: coding rules, a self-learning loop, file search, a changelog checker, and a status line.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "Brian Julius",
     "url": "https://github.com/bjulius"
